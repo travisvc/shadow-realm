@@ -1,4 +1,17 @@
 services:
+  db:
+    image: postgres:15
+    container_name: db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: danny_phantom
+      POSTGRES_PASSWORD: vHC4jr7LVq1I4D2x0rLG
+      POSTGRES_DB: danny_phantom
+    ports:
+      - "5432:5432"
+    volumes:
+      - dp_data:/var/lib/postgresql/data
+
   trader:
     build: ./src
     container_name: trader
@@ -9,6 +22,12 @@ services:
       - ./src:/app
     environment:
       - PYTHONPATH=/app
+      - DATABASE_URL=postgresql://danny_phantom:vHC4jr7LVq1I4D2x0rLG@db:5432/danny_phantom
+    depends_on:
+      - db
+
+volumes:
+  dp_data:
 
   # dashboard:
   #   build: ./web
