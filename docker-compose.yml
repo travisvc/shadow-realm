@@ -1,0 +1,23 @@
+services:
+  trader:
+    build: ./src
+    container_name: trader
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./src:/app
+    environment:
+      - PYTHONPATH=/app
+
+  # dashboard:
+  #   build: ./web
+  #   container_name: dashboard
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - trader
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./web:/app
+  #     - /app/node_modules
