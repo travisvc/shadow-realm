@@ -1,107 +1,113 @@
 import bittensor as bt
-from config import Logger
-from database import Tick, get_db_session
+from logger import Logger
+from db import Extrinsic, Tick, Database
+from typing import Dict, Optional
 
+
+COLDKEY = "5DoAKfL58HSgynPxM1mUpyw8Fm6wS9PREZcCj4Heooq5uN4B"
+
+db = Database()
 logger = Logger.get_logger(__name__)
-
-logger.info("The shadow trader is running...")
-
 subtensor = bt.subtensor(network="wss://archive.chain.opentensor.ai:443")
 
-coldkey = "5DoAKfL58HSgynPxM1mUpyw8Fm6wS9PREZcCj4Heooq5uN4B"
-
-# # query data from database
-# session = get_db_session()
-# ticks = session.query(Tick).all()
-# for tick in ticks:
-#     logger.info(f"Block number: {tick.block_number}")
 
 
-# # query number of ticks in database
-# num_ticks = session.query(Tick).count()
-# logger.info(f"Number of ticks in database: {num_ticks}")
-
-# # query latest tick in database
-# latest_tick = session.query(Tick).order_by(Tick.block_number.desc()).first()
-# logger.info(f"Latest tick in database: {latest_tick.block_number}")
-# logger.info(f"Timestamp: {latest_tick.timestamp}")
-# logger.info(f"Address: {latest_tick.address}")
-# logger.info(f"Call module: {latest_tick.call_module}")
-# logger.info(f"Call function: {latest_tick.call_function}")
-# logger.info(f"Call args: {latest_tick.call_args}")
-
-# # query based on coldkey
-# coldkey_ticks = session.query(Tick).filter(Tick.address == coldkey).all()
-# logger.info(f"Number of ticks for coldkey: {len(coldkey_ticks)}")
-# for tick in coldkey_ticks:
-#     logger.info(f"Block number: {tick.block_number}")
-
-
-def calculate_total_balance(coldkey: str):
-    # Free balance
+def calculate_portfolio_balance(subtensor: bt.subtensor, coldkey: str) -> Dict[str, str]:
+    """ Calculate the total portfolio balance including free balance and staked amounts. """
     free_balance = subtensor.get_balance(coldkey)
-    logger.info(f"Free balance: {free_balance}")
-
-    # Staked balance
     coldkey_stake = subtensor.get_stake_for_coldkey(coldkey_ss58=coldkey)
-    total_staked_rao = 0
+    
+    root_staked_rao = 0
+    alpha_staked_rao = 0
+    
     for stake_object in coldkey_stake:
         price = subtensor.get_subnet_price(netuid=stake_object.netuid)
-        total_staked_rao += (stake_object.stake.rao * price.rao) // 1_000_000_000
+        
+        if stake_object.netuid == 0:
+            root_staked_rao += (stake_object.stake.rao * price.rao) // 1_000_000_000
+        else:
+            alpha_staked_rao += (stake_object.stake.rao * price.rao) // 1_000_000_000
 
-    total_staked = bt.Balance.from_rao(int(total_staked_rao))
-    logger.info(f"Total staked: {total_staked}")
+    root_staked = bt.Balance.from_rao(int(root_staked_rao))
+    alpha_staked = bt.Balance.from_rao(int(alpha_staked_rao))
+    total_balance = free_balance + root_staked + alpha_staked
 
-    # Total balance
-    total_balance = free_balance + total_staked
-    logger.info(f"Total balance: {total_balance}")
+    return {'total': str(total_balance), 'free': str(free_balance), 'root': str(root_staked), 'alpha': str(alpha_staked)}
 
-    return total_balance
 
-while True:
-    subtensor.wait_for_block()
+def detect_trade_signal(call_function: str) -> Optional[str]:
+    if call_function == "add_stake_limit":
+        return 'BUY'
+    elif call_function == "remove_stake_limit":
+        return 'SELL'
+    return None
 
-    current_block = subtensor.get_current_block()
-    timestamp = subtensor.get_timestamp(block=current_block)
-    logger.info(f"Timestamp: {timestamp} - Block: {current_block}")
 
-    block_hash = subtensor.get_block_hash(current_block)
-    block = subtensor.substrate.get_block(block_hash=block_hash)
-    
-    # Check extrinsics for coldkey
-    extrinsics = block.get('extrinsics', [])
-    for extrinsic in extrinsics:
-        if coldkey in str(extrinsic):
-            # logger.info(f"Found coldkey in extrinsic: {extrinsic}")
-            value = extrinsic.value
-            call = value['call']
+def process_trade_signal(signal: str, call_function: str) -> None:
+    if signal == 'BUY':
+        logger.info(f"Trade signal detected: {call_function} - Executing BUY order")
+    elif signal == 'SELL':
+        logger.info(f"Trade signal detected: {call_function} - Executing SELL order")
+
+
+
+def main():
+    logger.info("Welcome to the Shadow Realm!")    
+
+    while True:
+        try:
+            subtensor.wait_for_block()
+
+            # Process tick in this block
+            current_block = subtensor.get_current_block()
+            timestamp = subtensor.get_timestamp(block=current_block)
+            balance = calculate_portfolio_balance(subtensor, COLDKEY)
+            logger.info(f"Processing tick - Block: {current_block}, Timestamp: {timestamp}")
             
-            logger.info(f"Address: {value['address']}")
-            logger.info(f"Call Module: {call['call_module']}")
-            logger.info(f"Call Function: {call['call_function']}")
-            for arg in call['call_args']:
-                logger.info(f"  - {arg['name']}: {arg['value']}")
+            # Save tick to database
+            tick = Tick(block_number=current_block, timestamp=timestamp, balance=balance)
+            db.save(tick)
             
-            # Save to database
-            session = get_db_session()
-            try:
-                tick = Tick(
-                    block_number=current_block,
-                    timestamp=timestamp,
-                    address=value['address'],
-                    call_module=call['call_module'],
-                    call_function=call['call_function'],
-                    call_args=call['call_args']
-                )
-                session.add(tick)
-                session.commit()
-                logger.info("Saved to database")
-            except Exception as e:
-                session.rollback()
-                logger.error(f"Error saving to database: {e}")
-            finally:
-                session.close()
+            # Process extrinsics in this block
+            block_hash = subtensor.get_block_hash(current_block)
+            block = subtensor.substrate.get_block(block_hash=block_hash)
+            extrinsics = block.get('extrinsics', [])
+            
+            for extrinsic in extrinsics:
+                if COLDKEY not in str(extrinsic):
+                    continue
+                
+                logger.info("Relevant extrinsic found for coldkey")
+                value = extrinsic.value
+                call = value['call']
+                call_function = call['call_function']
+                
+                signal = detect_trade_signal(call_function)
+                
+                if signal:
+                    process_trade_signal(signal, call_function)
+                    
+                    # Save extrinsic to database
+                    args = {arg['name']: arg['value'] for arg in call['call_args']}
+                    extrinsic = Extrinsic(
+                        block_number=current_block,
+                        timestamp=timestamp,
+                        address=value['address'],
+                        call_module=call['call_module'],
+                        call_function=call_function,
+                        hotkey=args.get('hotkey'),
+                        netuid=args.get('netuid'),
+                        amount_staked=args.get('amount_staked'),
+                        limit_price=args.get('limit_price'),
+                    )
+                    db.save(extrinsic)
+                    logger.info("Extrinsic saved to database")
+                else:
+                    logger.debug(f"Non-trading extrinsic detected: {call_function} - Skipping")
+        except Exception as e:
+            logger.error(f"Error in main loop: {e}")
+            continue
 
-            total_balance = calculate_total_balance(coldkey)
 
-    
+if __name__ == "__main__":
+    main()
