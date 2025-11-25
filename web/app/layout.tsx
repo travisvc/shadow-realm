@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Shadow Realm Dashboard",
+  title: "The Shadow Realm",
   description: "Trading system monitoring dashboard",
 };
 

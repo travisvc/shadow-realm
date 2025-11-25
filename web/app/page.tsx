@@ -1,18 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+import { useEffect, useState, useMemo } from "react";
+import BalanceChart from "./components/BalanceChart";
 
 const API_URL =
   typeof window !== "undefined"
@@ -56,8 +45,8 @@ export default function Home() {
         await Promise.all([
           fetch(`${API_URL}/ticks/count`),
           fetch(`${API_URL}/extrinsics/count`),
-          fetch(`${API_URL}/ticks?limit=50`),
-          fetch(`${API_URL}/extrinsics?limit=50`),
+          fetch(`${API_URL}/ticks?limit=100`),
+          fetch(`${API_URL}/extrinsics?limit=100`),
         ]);
 
       const ticksCountData = await ticksCountRes.json();
@@ -83,27 +72,23 @@ export default function Home() {
   }, []);
 
   // Prepare chart data
-  const ticksChartData = ticks
-    .slice(0, 20)
-    .reverse()
-    .map((tick) => ({
-      time: new Date(tick.timestamp).toLocaleTimeString(),
-      total: parseFloat(tick.balance.total.replace(/[τ,]/g, "")) || 0,
-      free: parseFloat(tick.balance.free.replace(/[τ,]/g, "")) || 0,
-      alpha: parseFloat(tick.balance.alpha.replace(/[τ,]/g, "")) || 0,
-    }));
-
-  const extrinsicsByFunction = extrinsics.reduce((acc, ext) => {
-    const func = ext.call_function || "unknown";
-    acc[func] = (acc[func] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  const extrinsicsChartData = Object.entries(extrinsicsByFunction).map(
-    ([name, value]) => ({
-      name: name.replace("_", " "),
-      count: value,
-    })
+  const ticksChartData = useMemo(
+    () =>
+      ticks
+        .sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        )
+        .map((tick) => {
+          const date = new Date(tick.timestamp);
+          return {
+            timestamp: date.getTime(),
+            total: parseFloat(tick.balance.total.replace(/[τ,]/g, "")) || 0,
+            free: parseFloat(tick.balance.free.replace(/[τ,]/g, "")) || 0,
+            alpha: parseFloat(tick.balance.alpha.replace(/[τ,]/g, "")) || 0,
+          };
+        }),
+    [ticks]
   );
 
   if (loading) {
@@ -118,85 +103,22 @@ export default function Home() {
     <div className="min-h-screen bg-zinc-50 dark:bg-black p-8">
       <div className="max-w-7xl mx-auto">
         <h1 className="text-4xl font-bold mb-8 text-zinc-900 dark:text-zinc-100">
-          Shadow Realm Dashboard
+          The Shadow Realm
         </h1>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              Total Ticks
-            </h2>
-            <p className="text-4xl font-bold text-blue-600">
-              {ticksCount.toLocaleString()}
-            </p>
-          </div>
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
-            <h2 className="text-2xl font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
-              Total Extrinsics
-            </h2>
-            <p className="text-4xl font-bold text-green-600">
-              {extrinsicsCount.toLocaleString()}
-            </p>
-          </div>
-        </div>
-
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              Balance Over Time
-            </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={ticksChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="time" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="total"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="free"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="alpha"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              Extrinsics by Function
-            </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={extrinsicsChartData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="count" fill="#10b981" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        {/* Balance Over Time Chart */}
+        <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow mb-8">
+          <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
+            Balance
+          </h2>
+          <BalanceChart data={ticksChartData} />
         </div>
 
         {/* Tables */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              Recent Ticks
+              Ticks ({ticksCount.toLocaleString()})
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -217,25 +139,38 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {ticks.slice(0, 10).map((tick) => (
-                    <tr
-                      key={tick.block_number}
-                      className="border-b border-zinc-100 dark:border-zinc-800"
-                    >
-                      <td className="p-2 text-zinc-700 dark:text-zinc-300">
-                        {tick.block_number}
-                      </td>
-                      <td className="p-2 text-zinc-700 dark:text-zinc-300">
-                        {new Date(tick.timestamp).toLocaleString()}
-                      </td>
-                      <td className="p-2 text-zinc-700 dark:text-zinc-300">
-                        {tick.balance.total}
-                      </td>
-                      <td className="p-2 text-zinc-700 dark:text-zinc-300">
-                        {tick.balance.alpha}
-                      </td>
-                    </tr>
-                  ))}
+                  {ticks
+                    .sort(
+                      (a, b) =>
+                        new Date(b.timestamp).getTime() -
+                        new Date(a.timestamp).getTime()
+                    )
+                    .slice(0, 10)
+                    .map((tick) => (
+                      <tr
+                        key={tick.block_number}
+                        className="border-b border-zinc-100 dark:border-zinc-800"
+                      >
+                        <td className="p-2 text-zinc-700 dark:text-zinc-300">
+                          {tick.block_number}
+                        </td>
+                        <td className="p-2 text-zinc-700 dark:text-zinc-300">
+                          {new Date(tick.timestamp).toLocaleString()}
+                        </td>
+                        <td className="p-2 text-zinc-700 dark:text-zinc-300">
+                          τ
+                          {parseFloat(
+                            tick.balance.total.replace(/[τ,]/g, "")
+                          ).toFixed(2)}
+                        </td>
+                        <td className="p-2 text-zinc-700 dark:text-zinc-300">
+                          τ
+                          {parseFloat(
+                            tick.balance.alpha.replace(/[τ,]/g, "")
+                          ).toFixed(2)}
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -243,7 +178,7 @@ export default function Home() {
 
           <div className="bg-white dark:bg-zinc-900 p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100 mb-4">
-              Recent Extrinsics
+              Extrinsics ({extrinsicsCount.toLocaleString()})
             </h2>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -276,7 +211,7 @@ export default function Home() {
                         {ext.call_function}
                       </td>
                       <td className="p-2 text-zinc-700 dark:text-zinc-300">
-                        {ext.netuid || "-"}
+                        {ext.netuid}
                       </td>
                       <td className="p-2 text-zinc-700 dark:text-zinc-300">
                         {ext.amount_staked
