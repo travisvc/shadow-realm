@@ -10,6 +10,7 @@ docker compose up --build
 # Remove everything: containers, networks, images, volumes, build cache
 # IMPORTANT: This will also remove everything from other projects
 docker system prune -a --volumes
+docker compose down -v
 ```
 
 ## Run separately

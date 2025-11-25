@@ -1,3 +1,8 @@
+import sys
+import os
+# Add parent directory to path to import common modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import bittensor as bt
 from logger import Logger
 from db import Extrinsic, Tick, Database
@@ -112,3 +117,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
