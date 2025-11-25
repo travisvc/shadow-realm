@@ -89,6 +89,7 @@ def main():
                     
                     # Save extrinsic to database
                     args = {arg['name']: arg['value'] for arg in call['call_args']}
+    
                     extrinsic = Extrinsic(
                         block_number=current_block,
                         timestamp=timestamp,
@@ -97,7 +98,7 @@ def main():
                         call_function=call_function,
                         hotkey=args.get('hotkey'),
                         netuid=args.get('netuid'),
-                        amount_staked=args.get('amount_staked'),
+                        amount=args.get('amount_staked') if call_function == "add_stake_limit" else args.get('amount_unstaked'),
                         limit_price=args.get('limit_price'),
                     )
                     db.save(extrinsic)

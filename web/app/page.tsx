@@ -27,7 +27,7 @@ interface Extrinsic {
   call_function: string;
   hotkey: string | null;
   netuid: number | null;
-  amount_staked: number | null;
+  amount: number | null;
   limit_price: number | null;
 }
 
@@ -214,9 +214,7 @@ export default function Home() {
                         {ext.netuid}
                       </td>
                       <td className="p-2 text-zinc-700 dark:text-zinc-300">
-                        {ext.amount_staked
-                          ? (ext.amount_staked / 1e9).toFixed(2)
-                          : "-"}
+                        {ext.amount ? (ext.amount / 1e9).toFixed(2) : "-"}
                       </td>
                     </tr>
                   ))}

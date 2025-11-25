@@ -4,13 +4,13 @@ services:
     container_name: db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: danny_phantom
+      POSTGRES_USER: sr
       POSTGRES_PASSWORD: vHC4jr7LVq1I4D2x0rLG
-      POSTGRES_DB: danny_phantom
+      POSTGRES_DB: sr
     ports:
       - "5432:5432"
     volumes:
-      - dp_data:/var/lib/postgresql/data
+      - sr_data:/var/lib/postgresql/data
 
   trader:
     build: ./src
@@ -20,7 +20,7 @@ services:
       - ./src:/app
     environment:
       - PYTHONPATH=/app
-      - DATABASE_URL=postgresql://danny_phantom:vHC4jr7LVq1I4D2x0rLG@db:5432/danny_phantom
+      - DATABASE_URL=postgresql://sr:vHC4jr7LVq1I4D2x0rLG@db:5432/sr
     command: python main.py
     depends_on:
       - db
@@ -35,7 +35,7 @@ services:
       - ./src:/app
     environment:
       - PYTHONPATH=/app
-      - DATABASE_URL=postgresql://danny_phantom:vHC4jr7LVq1I4D2x0rLG@db:5432/danny_phantom
+      - DATABASE_URL=postgresql://sr:vHC4jr7LVq1I4D2x0rLG@db:5432/sr
     command: python api.py
     depends_on:
       - db
@@ -53,4 +53,4 @@ services:
       - /app/node_modules
 
 volumes:
-  dp_data:
+  sr_data:

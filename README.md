@@ -1,4 +1,4 @@
-# Danny Phantom
+# The Shadow Realm
 
 The shadow trader.
 

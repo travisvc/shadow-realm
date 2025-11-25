@@ -18,7 +18,7 @@ class Extrinsic(Base):
     call_function = Column(String, nullable=False)
     hotkey = Column(String, nullable=True)
     netuid = Column(Integer, nullable=True)
-    amount_staked = Column(BigInteger, nullable=True)
+    amount = Column(BigInteger, nullable=True)
     limit_price = Column(BigInteger, nullable=True)
     
     
@@ -33,7 +33,7 @@ class Tick(Base):
 
 class Database:
     def __init__(self):
-        database_url = os.getenv('DATABASE_URL', 'postgresql://danny_phantom:vHC4jr7LVq1I4D2x0rLG@localhost:5432/danny_phantom')
+        database_url = os.getenv('DATABASE_URL', 'postgresql://sr:vHC4jr7LVq1I4D2x0rLG@localhost:5432/sr')
         self.engine = create_engine(database_url)
         Base.metadata.create_all(self.engine)
         self.Session = sessionmaker(bind=self.engine)
