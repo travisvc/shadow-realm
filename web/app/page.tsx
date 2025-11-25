@@ -136,6 +136,12 @@ export default function Home() {
                     <th className="text-left p-2 text-zinc-900 dark:text-zinc-100">
                       Alpha
                     </th>
+                    <th className="text-left p-2 text-zinc-900 dark:text-zinc-100">
+                      Root
+                    </th>
+                    <th className="text-left p-2 text-zinc-900 dark:text-zinc-100">
+                      Free
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
@@ -167,6 +173,18 @@ export default function Home() {
                           τ
                           {parseFloat(
                             tick.balance.alpha.replace(/[τ,]/g, "")
+                          ).toFixed(2)}
+                        </td>
+                        <td className="p-2 text-zinc-700 dark:text-zinc-300">
+                          τ
+                          {parseFloat(
+                            tick.balance.root.replace(/[τ,]/g, "")
+                          ).toFixed(2)}
+                        </td>
+                        <td className="p-2 text-zinc-700 dark:text-zinc-300">
+                          τ
+                          {parseFloat(
+                            tick.balance.free.replace(/[τ,]/g, "")
                           ).toFixed(2)}
                         </td>
                       </tr>

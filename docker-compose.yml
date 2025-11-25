@@ -11,6 +11,11 @@ services:
       - "5432:5432"
     volumes:
       - sr_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sr"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   trader:
     build:
@@ -25,7 +30,8 @@ services:
       - DATABASE_URL=postgresql://sr:vHC4jr7LVq1I4D2x0rLG@db:5432/sr
     command: python trader/main.py
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   api:
     build:
@@ -42,7 +48,8 @@ services:
       - DATABASE_URL=postgresql://sr:vHC4jr7LVq1I4D2x0rLG@db:5432/sr
     command: python api/main.py
     depends_on:
-      - db
+      db:
+        condition: service_healthy
 
   web:
     build: ./web
