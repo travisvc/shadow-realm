@@ -45,7 +45,7 @@ export default function Home() {
         await Promise.all([
           fetch(`${API_URL}/ticks/count`),
           fetch(`${API_URL}/extrinsics/count`),
-          fetch(`${API_URL}/ticks?limit=100`),
+          fetch(`${API_URL}/ticks?limit=4000`),
           fetch(`${API_URL}/extrinsics?limit=100`),
         ]);
 
@@ -102,10 +102,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-zinc-50 dark:bg-[#111112] p-8">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-4xl font-bold mb-8 text-[#161617] dark:text-zinc-100">
-          The Shadow Realm
-        </h1>
-
         {/* Balance Over Time Chart */}
         <div className="bg-white dark:bg-[#161617] p-6 rounded-lg shadow mb-8">
           <h2 className="text-xl font-semibold text-[#161617] dark:text-zinc-100 mb-4">
