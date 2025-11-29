@@ -1,8 +1,9 @@
 "use client";
 
 import {
-  LineChart,
+  ComposedChart,
   Line,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -105,15 +106,24 @@ export default function BalanceChart({ data }: BalanceChartProps) {
       : { yTicks: [], yDomain: ["dataMin", "dataMax"] };
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <LineChart data={data}>
-        <CartesianGrid stroke="currentColor" opacity={0.1} />
+    <ResponsiveContainer width="100%" height={300}>
+      <ComposedChart
+        data={data}
+        margin={{ left: 0, right: 0, top: 10, bottom: 0 }}
+      >
+        {/* <defs>
+          <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#BCE5DD" stopOpacity={0.1} />
+            <stop offset="100%" stopColor="#BCE5DD" stopOpacity={0} />
+          </linearGradient>
+        </defs> */}
+        <CartesianGrid stroke="currentColor" opacity={0.05} vertical={false} />
         <XAxis
           dataKey="timestamp"
           type="number"
           scale="time"
           domain={xDomain}
-          height={60}
+          height={40}
           ticks={xTicks}
           allowDataOverflow={false}
           tick={(props: any) => {
@@ -127,7 +137,7 @@ export default function BalanceChart({ data }: BalanceChartProps) {
                   y={0}
                   dy={16}
                   textAnchor="middle"
-                  fill="currentColor"
+                  className="fill-zinc-600 dark:fill-zinc-300"
                   fontSize={12}
                 >
                   {date.toLocaleTimeString([], {
@@ -140,9 +150,8 @@ export default function BalanceChart({ data }: BalanceChartProps) {
                   y={0}
                   dy={30}
                   textAnchor="middle"
-                  fill="currentColor"
+                  className="fill-zinc-600 dark:fill-zinc-500"
                   fontSize={10}
-                  opacity={0.7}
                 >
                   {date.toLocaleDateString([], {
                     month: "short",
@@ -157,8 +166,26 @@ export default function BalanceChart({ data }: BalanceChartProps) {
           domain={yDomain}
           ticks={yTicks}
           allowDecimals={false}
+          width={40}
           tickFormatter={(value) => {
             return Math.round(value).toString();
+          }}
+          tick={(props: any) => {
+            const { x, y, payload } = props;
+            return (
+              <g transform={`translate(${x},${y})`}>
+                <text
+                  x={0}
+                  y={0}
+                  dy={2}
+                  textAnchor="end"
+                  className="fill-zinc-600 dark:fill-zinc-500"
+                  fontSize={12}
+                >
+                  {Math.round(payload.value).toString()}
+                </text>
+              </g>
+            );
           }}
         />
         <Tooltip
@@ -213,14 +240,23 @@ export default function BalanceChart({ data }: BalanceChartProps) {
             return null;
           }}
         />
+        <Area
+          type="monotone"
+          dataKey="total"
+          fill="url(#balanceGradient)"
+          stroke="none"
+          connectNulls={false}
+          isAnimationActive={false}
+        />
         <Line
           type="monotone"
           dataKey="total"
           stroke="#BCE5DD"
           strokeWidth={2}
           dot={false}
+          isAnimationActive={false}
         />
-      </LineChart>
+      </ComposedChart>
     </ResponsiveContainer>
   );
 }
