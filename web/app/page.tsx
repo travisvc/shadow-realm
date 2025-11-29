@@ -6,6 +6,7 @@ import BalanceChart from "./components/BalanceChart";
 import PortfolioChart from "./components/PortfolioChart";
 import Dropdown from "./components/Dropdown";
 import TaoIcon from "./components/TaoIcon";
+import LoadingScreen from "./components/LoadingScreen";
 
 const API_URL =
   typeof window !== "undefined"
@@ -79,10 +80,8 @@ export default function Home() {
       setExtrinsicsCount(extrinsicsCountData);
       setTicks(ticksData);
       setExtrinsics(extrinsicsData);
-      setLoading(false);
     } catch (error) {
       console.error("Error fetching data:", error);
-      setLoading(false);
     }
   };
 
@@ -235,14 +234,19 @@ export default function Home() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-50 dark:bg-[#111112]">
-        <div className="text-xl">Loading dashboard...</div>
-      </div>
+      <LoadingScreen
+        onComplete={() => {
+          setLoading(false);
+        }}
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-[#111112] p-6">
+    <div
+      className="min-h-screen p-6"
+      style={{ animation: "fade-in 0.4s ease-in" }}
+    >
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-6 gap-4 mb-6">
           {/* Balance Over Time Chart */}
