@@ -8,10 +8,7 @@ import Dropdown from "./components/Dropdown";
 import TaoIcon from "./components/TaoIcon";
 import LoadingScreen from "./components/LoadingScreen";
 
-const API_URL =
-  typeof window !== "undefined"
-    ? process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
-    : "http://localhost:8000";
+const API_URL = "http://146.190.237.133:8000";
 
 interface Tick {
   block_number: number;
@@ -186,13 +183,13 @@ export default function Home() {
         total: currentBalance.total,
       },
       {
-        name: "Root Staked",
+        name: "Root",
         value: currentBalance.root,
         color: "#60A5FA",
         total: currentBalance.total,
       },
       {
-        name: "Alpha Staked",
+        name: "Alpha",
         value: currentBalance.alpha,
         color: "#A78BFA",
         total: currentBalance.total,
