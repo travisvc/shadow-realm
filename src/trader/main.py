@@ -1,24 +1,23 @@
-import sys
 import os
-# Add parent directory to path to import common modules
+import sys
+import bittensor as bt
+from typing import Dict, Optional
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import bittensor as bt
 from logger import Logger
 from db import Extrinsic, Tick, Database
-from typing import Dict, Optional
 
 
-COLDKEY = "5DoAKfL58HSgynPxM1mUpyw8Fm6wS9PREZcCj4Heooq5uN4B"
+COLDKEY = "5EgtJxWZFHp6zsmcSC43UucN8xhnqyzuYqjzXFfbxrCAyRm9" 
+# 5EXBgzHNjwBqbuRKXb38j8eyFUrWHepR8m9mxsgjbrK7qGpL
+# 5DoAKfL58HSgynPxM1mUpyw8Fm6wS9PREZcCj4Heooq5uN4B
 
 db = Database()
 logger = Logger.get_logger(__name__)
 subtensor = bt.subtensor(network="wss://archive.chain.opentensor.ai:443")
 
 
-
 def calculate_portfolio_balance(subtensor: bt.subtensor, coldkey: str) -> Dict[str, str]:
-    """ Calculate the total portfolio balance including free balance and staked amounts. """
     free_balance = subtensor.get_balance(coldkey)
     coldkey_stake = subtensor.get_stake_for_coldkey(coldkey_ss58=coldkey)
     
@@ -55,10 +54,7 @@ def process_trade_signal(signal: str, call_function: str) -> None:
         logger.info(f"Trade signal detected: {call_function} - Executing SELL order")
 
 
-
 def main():
-    logger.info("Welcome to the Shadow Realm!")    
-
     while True:
         try:
             subtensor.wait_for_block()
@@ -117,4 +113,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef } from "react";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Box } from "lucide-react";
 import BalanceChart from "./components/BalanceChart";
 import PortfolioChart from "./components/PortfolioChart";
 import Dropdown from "./components/Dropdown";
@@ -45,7 +45,7 @@ export default function Home() {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<"ticks" | "extrinsics">("ticks");
 
-  const coldkeyAddress = "5DoAKfL58HSgynPxM1mUpyw8Fm6wS9PREZcCj4Heooq5uN4B";
+  const coldkeyAddress = "5EgtJxWZFHp6zsmcSC43UucN8xhnqyzuYqjzXFfbxrCAyRm9";
 
   const copyToClipboard = async () => {
     try {
@@ -97,6 +97,13 @@ export default function Home() {
     );
   }, [ticks]);
 
+  // Calculate current block timestamp
+  const currentBlockTimestamp = useMemo(() => {
+    if (ticks.length === 0 || currentBlock === null) return null;
+    const latestTick = ticks.find((tick) => tick.block_number === currentBlock);
+    return latestTick ? latestTick.timestamp : null;
+  }, [ticks, currentBlock]);
+
   useEffect(() => {
     if (currentBlock !== null && prevBlockRef.current !== null) {
       if (currentBlock !== prevBlockRef.current) {
@@ -135,6 +142,8 @@ export default function Home() {
         initialBalance: { total: 0, free: 0, root: 0, alpha: 0 },
         pnl: 0,
         pnlPercent: 0,
+        sharpeRatio: 0,
+        realizedVolatility: 0,
         portfolioDistribution: [],
         tradingStats: {
           totalTrades: 0,
@@ -173,6 +182,37 @@ export default function Home() {
     const pnl = currentBalance.total - initialBalance.total;
     const pnlPercent =
       initialBalance.total > 0 ? (pnl / initialBalance.total) * 100 : 0;
+
+    // Calculate returns for Sharpe ratio and volatility
+    const returns: number[] = [];
+    for (let i = 1; i < sortedTicks.length; i++) {
+      const prevBalance = parseBalance(sortedTicks[i - 1].balance.total);
+      const currBalance = parseBalance(sortedTicks[i].balance.total);
+      if (prevBalance > 0) {
+        returns.push((currBalance - prevBalance) / prevBalance);
+      }
+    }
+
+    // Calculate mean return
+    const meanReturn =
+      returns.length > 0
+        ? returns.reduce((sum, r) => sum + r, 0) / returns.length
+        : 0;
+
+    // Calculate standard deviation of returns
+    const variance =
+      returns.length > 1
+        ? returns.reduce((sum, r) => sum + Math.pow(r - meanReturn, 2), 0) /
+          (returns.length - 1)
+        : 0;
+    const stdDev = Math.sqrt(variance);
+
+    // Calculate Sharpe ratio (assuming risk-free rate = 0)
+    // Annualized: multiply by sqrt(252) for daily data, or adjust based on time period
+    const sharpeRatio = stdDev > 0 ? (meanReturn / stdDev) * Math.sqrt(252) : 0;
+
+    // Calculate realized volatility (annualized)
+    const realizedVolatility = stdDev * Math.sqrt(252) * 100; // Convert to percentage
 
     // Portfolio distribution
     const portfolioDistribution = [
@@ -219,6 +259,8 @@ export default function Home() {
       initialBalance,
       pnl,
       pnlPercent,
+      sharpeRatio,
+      realizedVolatility,
       portfolioDistribution,
       tradingStats: {
         totalTrades: tradingExtrinsics.length,
@@ -316,18 +358,38 @@ export default function Home() {
                     </button>
                   </div>
                 </div>
-                <div>
-                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">
-                    Last Synchronized Block
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                      Synchronized on block
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Box
+                        className="w-3.5 h-3.5 mb-[1px] rotate-30 transition-colors duration-500 text-[#181819] dark:text-zinc-100"
+                        style={{
+                          color: blockHighlight ? "#BCE5DD" : undefined,
+                        }}
+                      />
+                      <div
+                        className="text-sm transition-colors duration-500 text-[#181819] dark:text-zinc-100"
+                        style={{
+                          color: blockHighlight ? "#BCE5DD" : undefined,
+                        }}
+                      >
+                        {currentBlock !== null ? currentBlock : "-"}
+                      </div>
+                    </div>
                   </div>
-                  <div
-                    className="text-sm transition-colors duration-500 text-[#181819] dark:text-zinc-100"
-                    style={{
-                      color: blockHighlight ? "#BCE5DD" : undefined,
-                    }}
-                  >
-                    {currentBlock !== null ? currentBlock : "-"}
-                  </div>
+                  {currentBlockTimestamp && (
+                    <div>
+                      <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                        Timestamp
+                      </div>
+                      <div className="text-sm text-[#181819] dark:text-zinc-100">
+                        {new Date(currentBlockTimestamp).toLocaleString()}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -345,38 +407,78 @@ export default function Home() {
                 </div>
               )}
             </div>
+
+            {/* Trading Metrics */}
+            <div className="bg-white dark:bg-[#181819] p-4 rounded-lg shadow">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                    Sharpe Ratio
+                  </div>
+                  <div className="text-sm text-[#181819] dark:text-zinc-100">
+                    {tradingMetrics.sharpeRatio.toFixed(2)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                    Realized Volatility
+                  </div>
+                  <div className="text-sm text-[#181819] dark:text-zinc-100">
+                    {tradingMetrics.realizedVolatility.toFixed(2)}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                    PnL
+                  </div>
+                  <div className="text-sm text-[#181819] dark:text-zinc-100">
+                    {tradingMetrics.pnl >= 0 ? "+" : ""}
+                    {tradingMetrics.pnl.toFixed(2)} τ
+                  </div>
+                </div>
+                <div>
+                  <div className="text-xs text-zinc-600 dark:text-zinc-400 mb-1">
+                    PnL %
+                  </div>
+                  <div className="text-sm text-[#181819] dark:text-zinc-100">
+                    {tradingMetrics.pnlPercent >= 0 ? "+" : ""}
+                    {tradingMetrics.pnlPercent.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Tables with Tabs */}
-        <div className="bg-white dark:bg-[#181819] p-6 rounded-lg shadow">
+        <div>
           {/* Tab Navigator */}
-          <div className="flex items-center gap-1 mb-6 border-b border-zinc-200 dark:border-zinc-700">
+          <div className="flex items-center gap-2 mb-4">
             <button
               onClick={() => setActiveTab("ticks")}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              className={`px-6 py-2.5 text-sm font-medium transition-colors rounded-lg cursor-pointer border ${
                 activeTab === "ticks"
-                  ? "border-[#BCE5DD] text-[#181819] dark:text-zinc-100"
+                  ? "border-zinc-200 dark:border-zinc-600 text-[#181819] dark:text-zinc-100 bg-white dark:bg-[#181819]"
                   : "border-transparent text-zinc-600 dark:text-zinc-400 hover:text-[#181819] dark:hover:text-zinc-100"
               }`}
             >
-              Ticks ({ticksCount.toLocaleString()})
+              Portfolio
             </button>
             <button
               onClick={() => setActiveTab("extrinsics")}
-              className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+              className={`px-6 py-2.5 text-sm font-medium transition-colors rounded-lg cursor-pointer border ${
                 activeTab === "extrinsics"
-                  ? "border-[#BCE5DD] text-[#181819] dark:text-zinc-100"
+                  ? "border-zinc-200 dark:border-zinc-600 text-[#181819] dark:text-zinc-100 bg-white dark:bg-[#181819]"
                   : "border-transparent text-zinc-600 dark:text-zinc-400 hover:text-[#181819] dark:hover:text-zinc-100"
               }`}
             >
-              Extrinsics ({extrinsicsCount.toLocaleString()})
+              Extrinsics
             </button>
           </div>
 
           {/* Ticks Table */}
           {activeTab === "ticks" && (
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto bg-white dark:bg-[#181819] p-6 rounded-lg shadow">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-zinc-200 dark:border-zinc-700">

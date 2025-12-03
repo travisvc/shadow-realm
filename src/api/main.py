@@ -1,22 +1,17 @@
 import sys
 import os
-# Add parent directory to path to import common modules
+import uvicorn
+from typing import Optional
+from fastapi import FastAPI
+from datetime import datetime, timedelta
+from fastapi.middleware.cors import CORSMiddleware
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import uvicorn
 from logger import Logger
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from db import Extrinsic, Tick, Database
-from datetime import datetime, timedelta
-from typing import Optional
 
-
-logger = Logger.get_logger(__name__)
 
 app = FastAPI()
-
-# Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://146.190.237.133:3000"],
@@ -27,6 +22,7 @@ app.add_middleware(
 
 db = Database()
 session = db.Session()
+logger = Logger.get_logger(__name__)
 
 
 @app.get("/ticks/count")
@@ -93,4 +89,3 @@ async def get_extrinsics(
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
